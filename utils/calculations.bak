@@ -1,0 +1,28 @@
+def calculate_kpis(
+    total_production_cost: float,
+    production_units: int,
+    selling_price: float,
+    monthly_units_sold: int,
+    fixed_costs: float,
+    variable_cost_per_unit: float,
+):
+    cost_per_unit = total_production_cost / production_units
+    gross_profit_per_unit = selling_price - cost_per_unit
+    gross_margin_pct = (gross_profit_per_unit / selling_price) * 100 if selling_price else 0
+
+    monthly_revenue = selling_price * monthly_units_sold
+    monthly_profit = gross_profit_per_unit * monthly_units_sold
+
+    contribution_margin = selling_price - variable_cost_per_unit
+    break_even_quantity = fixed_costs / contribution_margin if contribution_margin > 0 else 0
+
+    return {
+        "total_production_cost": total_production_cost,
+        "cost_per_unit": cost_per_unit,
+        "selling_price": selling_price,
+        "gross_profit_per_unit": gross_profit_per_unit,
+        "gross_margin_pct": gross_margin_pct,
+        "break_even_quantity": break_even_quantity,
+        "monthly_revenue": monthly_revenue,
+        "monthly_profit": monthly_profit,
+    }

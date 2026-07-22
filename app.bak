@@ -1,0 +1,243 @@
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(page_title="Shark Tank Production Dashboard", layout="wide")
+
+st.title("Shark Tank Production Dashboard")
+st.caption("Cost, Margin, and Break-even Analysis")
+
+# -----------------------------
+# Inputs
+# -----------------------------
+uploaded_file = st.file_uploader(
+    "Upload your clean Excel file",
+    type=["xlsx"]
+)
+
+selling_price = st.sidebar.number_input(
+    "Selling Price per Unit ($)",
+    value=799.00
+)
+
+monthly_units = st.sidebar.number_input(
+    "Estimated Monthly Units Sold",
+    value=100
+)
+
+ai_savings_pct = st.sidebar.slider(
+    "Estimated AI Cost Savings %",
+    0,
+    50,
+    15
+)
+
+if uploaded_file:
+
+    try:
+        totals = pd.read_excel(uploaded_file, sheet_name="Totals")
+
+        # Convert columns to numeric and ignore text
+        fixed_cost = pd.to_numeric(
+            totals.iloc[:, 1],
+            errors="coerce"
+        ).sum()
+
+        variable_cost_1000 = pd.to_numeric(
+            totals.iloc[:, 3],
+            errors="coerce"
+        ).sum()
+
+    except Exception as e:
+        st.error(f"Error reading Excel file: {e}")
+        st.stop()
+
+    units = 1000
+
+    variable_cost_per_unit = variable_cost_1000 / units
+    cost_per_unit = (fixed_cost + variable_cost_1000) / units
+
+    gross_profit_per_unit = selling_price - cost_per_unit
+    gross_margin_pct = gross_profit_per_unit / selling_price
+
+    break_even_qty = fixed_cost / max(
+        selling_price - variable_cost_per_unit,
+        1
+    )
+
+    monthly_revenue = selling_price * monthly_units
+    monthly_profit = gross_profit_per_unit * monthly_units
+
+    ai_cost_savings = (
+        fixed_cost + variable_cost_1000
+    ) * (ai_savings_pct / 100)
+
+    business_health_score = min(
+        max((gross_margin_pct * 100) - 10, 0),
+        100
+    )
+
+    ai_confidence = 85
+
+    # -----------------------------
+    # KPI Cards
+    # -----------------------------
+    st.subheader("Key KPIs")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Total Production Cost",
+        f"${fixed_cost + variable_cost_1000:,.0f}"
+    )
+
+    col2.metric(
+        "Cost per Unit",
+        f"${cost_per_unit:,.2f}"
+    )
+
+    col3.metric(
+        "Selling Price",
+        f"${selling_price:,.2f}"
+    )
+
+    col4.metric(
+        "Gross Margin",
+        f"{gross_margin_pct:.1%}"
+    )
+
+    col5, col6, col7, col8 = st.columns(4)
+
+    col5.metric(
+        "Gross Profit / Unit",
+        f"${gross_profit_per_unit:,.2f}"
+    )
+
+    col6.metric(
+        "Break-even Quantity",
+        f"{break_even_qty:,.0f} units"
+    )
+
+    col7.metric(
+        "Monthly Revenue",
+        f"${monthly_revenue:,.0f}"
+    )
+
+    col8.metric(
+        "Monthly Profit",
+        f"${monthly_profit:,.0f}"
+    )
+
+    # -----------------------------
+    # Cost Dashboard
+    # -----------------------------
+    st.subheader("Cost Breakdown")
+
+    cost_data = pd.DataFrame({
+        "Category": [
+            "Fixed Costs",
+            "Variable Costs"
+        ],
+        "Amount": [
+            fixed_cost,
+            variable_cost_1000
+        ]
+    })
+
+    st.bar_chart(cost_data.set_index("Category"))
+
+    highest_cost_category = cost_data.loc[
+        cost_data["Amount"].idxmax(),
+        "Category"
+    ]
+
+    st.info(
+        f"Highest Cost Category: **{highest_cost_category}**"
+    )
+
+    # -----------------------------
+    # Margin Dashboard
+    # -----------------------------
+    st.subheader("Margin Analysis")
+
+    margin_data = pd.DataFrame({
+        "Metric": [
+            "Cost per Unit",
+            "Gross Profit per Unit"
+        ],
+        "Amount": [
+            cost_per_unit,
+            gross_profit_per_unit
+        ]
+    })
+
+    st.bar_chart(
+        margin_data.set_index("Metric")
+    )
+
+    # -----------------------------
+    # Break-even Dashboard
+    # -----------------------------
+    st.subheader("Break-even Analysis")
+
+    st.write(
+        f"You need to sell approximately **{break_even_qty:,.0f} units** to break even."
+    )
+
+    scenario_units = pd.DataFrame({
+        "Units Sold": [
+            50,
+            100,
+            250,
+            500,
+            750,
+            1000
+        ]
+    })
+
+    scenario_units["Revenue"] = (
+        scenario_units["Units Sold"] *
+        selling_price
+    )
+
+    scenario_units["Profit"] = (
+        scenario_units["Units Sold"] *
+        (selling_price - variable_cost_per_unit)
+    ) - fixed_cost
+
+    st.line_chart(
+        scenario_units.set_index("Units Sold")[
+            ["Revenue", "Profit"]
+        ]
+    )
+
+    st.dataframe(
+        scenario_units,
+        use_container_width=True
+    )
+
+    # -----------------------------
+    # AI Insights
+    # -----------------------------
+    st.subheader("AI Insights")
+
+    col9, col10, col11 = st.columns(3)
+
+    col9.metric(
+        "Estimated AI Cost Savings",
+        f"${ai_cost_savings:,.0f}"
+    )
+
+    col10.metric(
+        "Business Health Score",
+        f"{business_health_score:.0f}/100"
+    )
+
+    col11.metric(
+        "AI Recommendation Confidence",
+        f"{ai_confidence}%"
+    )
+
+else:
+    st.warning(
+        "Please upload your clean Excel spreadsheet to view the dashboard."
+    )
